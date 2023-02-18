@@ -8,21 +8,27 @@
 #include <netdb.h> 
 #include <errno.h>
 #include <strings.h>
-#define BUFLEN 81
+#include <cstring>
+#include <unistd.h>
+#include <arpa/inet.h>
+#define BUFLEN 1024
 
 using namespace std;
 
 int main(){
-   int ServSock = socket(AF_INET, SOCK_STREAM, 0);
+   struct sockaddr_in servAddr, clientAddr ;
+   char buf[BUFLEN] ;
+
+   int ServSock = socket(AF_INET, SOCK_DGRAM, 0);
    if (ServSock < 0) {
 		cout << "Error initialization socket"<< endl; 
 		return 1;
    }
    else cout << "Server socket initialization is OK" << endl;
    
-   struct sockaddr_in servAddr, clientAddr ;
-   char buf[BUFLEN] ;
+   
    bzero( (char *) &servAddr, sizeof( servAddr ) );
+   bzero( (char *) &clientAddr, sizeof( clientAddr ) );
    servAddr.sin_family = AF_INET;
    servAddr.sin_addr.s_addr = htonl( INADDR_ANY );
    servAddr.sin_port = 0;
@@ -33,21 +39,29 @@ int main(){
 	return 1;
    }
    else cout<< "Bind os OK"<< endl;
-   int length = sizeof(servAddr);
-   
-   getsockname( ServSock, (sockaddr*)&servAddr, sizeof(servAddr));
+
+   unsigned int length = sizeof(servAddr);
+   getsockname( ServSock, (sockaddr*)&servAddr, &length);
    
    cout<<"Server:"<<endl;
+   cout<<"ip - " << inet_ntoa(servAddr.sin_addr) << endl;
    cout<<"port - " << ntohs(servAddr.sin_port ) << endl;
-   cout<<"addres - " << servAddr.sin_addr.s_addr << endl;
    
    while(1){
    	length = sizeof( clientAddr ) ;
-	bzero( buf, sizeof( BUFLEN) );
+	   bzero( buf, sizeof( BUFLEN) );
 	
-   	if(recv(ServSock,buf,BUFLEN,0)>=0){
-   		cout<<"Mes - "<<buf<<endl;
+      int res = recvfrom(ServSock,buf,BUFLEN,0,( struct sockaddr *) &clientAddr,&length);
+   	if(res<0){
+   		cout<<"Cant recv"<<buf<<endl;
    	}
+      else{
+         cout<<"Client: "<<buf<<endl;
+         sendto(ServSock, buf, strlen(buf),0, (const struct sockaddr *) &clientAddr, sizeof(clientAddr));
+         cout<<"ip - " << inet_ntoa(clientAddr.sin_addr) << endl;
+         cout<<"port - " << ntohs(clientAddr.sin_port ) << endl;
+         cout<<endl;
+      }
    	
    
    }
