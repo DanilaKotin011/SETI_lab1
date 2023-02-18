@@ -1,11 +1,11 @@
 #include <iostream>
 #include <stdio.h>
 #include <vector>
-#include <sys/types.h> 
-#include <sys/socket.h> 
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <stdio.h>
-#include <netinet/in.h> 
-#include <netdb.h> 
+#include <netinet/in.h>
+#include <netdb.h>
 #include <errno.h>
 #include <strings.h>
 #include <cstring>
@@ -15,97 +15,105 @@
 
 using namespace std;
 
-int main(){
-   struct sockaddr_in servAddr, clientAddr ;
-   char buf[BUFLEN] ;
-   int pid=0;
-   int ClientSock=0;
+int main()
+{
+   struct sockaddr_in servAddr, clientAddr;
+   char buf[BUFLEN];
+   int pid = 0;
+   int ClientSock = 0;
    in_addr ip_to_num;
-   int err=0;
+   int err = 0;
 
-   err=inet_pton(AF_INET, "127.0.0.1", &ip_to_num);
-   if(err<0){
-      cout<<"Error inet_pton"<<endl;
+   err = inet_pton(AF_INET, "127.0.0.1", &ip_to_num);
+   if (err < 0)
+   {
+      cout << "Error inet_pton" << endl;
       return 1;
    }
 
    int ServSock = socket(AF_INET, SOCK_STREAM, 0);
-   if (ServSock < 0) {
-		cout << "Error initialization socket"<< endl; 
-		return 1;
+   if (ServSock < 0)
+   {
+      cout << "Error initialization socket" << endl;
+      return 1;
    }
-   else cout << "Server socket initialization is OK" << endl;
-   
-   
-   bzero( (char *) &servAddr, sizeof( servAddr ) );
-   bzero( (char *) &clientAddr, sizeof( clientAddr ) );
+   else
+      cout << "Server socket initialization is OK" << endl;
+
+   bzero((char *)&servAddr, sizeof(servAddr));
+   bzero((char *)&clientAddr, sizeof(clientAddr));
    servAddr.sin_family = AF_INET;
    servAddr.sin_addr = ip_to_num;
    servAddr.sin_port = 0;
-   
-   if (bind( ServSock, (sockaddr*)&servAddr, sizeof(servAddr)))
+
+   if (bind(ServSock, (sockaddr *)&servAddr, sizeof(servAddr)))
    {
-	cout<< "Error bind socket"<< endl;
-	return 1;
-   }
-   else cout<< "Bind os OK"<< endl;
-
-   unsigned int length = sizeof(servAddr);
-   getsockname( ServSock, (sockaddr*)&servAddr, &length);
-   
-   cout<<"Server:"<<endl;
-   cout<<"ip - " << inet_ntoa(servAddr.sin_addr) << endl;
-   cout<<"port - " << ntohs(servAddr.sin_port ) << endl;
-
-   err =listen(ServSock,5);
-   if(err<0){
-      cout<<"Error listen"<<endl;
+      cout << "Error bind socket" << endl;
       return 1;
    }
-   else{
-      cout<<"Listen is OK"<<endl;
+   else
+      cout << "Bind os OK" << endl;
+
+   unsigned int length = sizeof(servAddr);
+   getsockname(ServSock, (sockaddr *)&servAddr, &length);
+
+   cout << "Server:" << endl;
+   cout << "ip - " << inet_ntoa(servAddr.sin_addr) << endl;
+   cout << "port - " << ntohs(servAddr.sin_port) << endl;
+
+   err = listen(ServSock, 5);
+   if (err < 0)
+   {
+      cout << "Error listen" << endl;
+      return 1;
+   }
+   else
+   {
+      cout << "Listen is OK" << endl;
    }
 
-   while(1){
-      length=sizeof(clientAddr);
-      ClientSock = accept(ServSock,(sockaddr*)&clientAddr,&length);
-      if(ClientSock<0){
-         cout<<"Error accept"<<endl;
+   while (1)
+   {
+      length = sizeof(clientAddr);
+      ClientSock = accept(ServSock, (sockaddr *)&clientAddr, &length);
+      if (ClientSock < 0)
+      {
+         cout << "Error accept" << endl;
       }
-      else{
-         cout<<"New client"<<endl;
-         pid=fork();
-         if(pid==0) break;
+      else
+      {
+         cout << "New client" << endl;
+         pid = fork();
+         if (pid == 0)
+            break;
       }
    }
 
    close(ServSock);
-   
-   while(1){
-   	length = sizeof( clientAddr ) ;
-	   bzero( buf, sizeof( BUFLEN) );
-	
-      int res = recv(ClientSock,buf,BUFLEN,0);
-   	if(res<0){
-   		cout<<"Cant recv"<<buf<<endl;
-   	}
-      else if(res>0){
-         cout<<"Client: "<<buf<<endl;
-         send(ClientSock, buf, strlen(buf),0);
-         cout<<"ip - " << inet_ntoa(clientAddr.sin_addr) << endl;
-         cout<<"port - " << ntohs(clientAddr.sin_port ) << endl;
-         cout<<endl;
+
+   while (1)
+   {
+      length = sizeof(clientAddr);
+      bzero(buf, sizeof(BUFLEN));
+
+      int res = recv(ClientSock, buf, BUFLEN, 0);
+      if (res < 0)
+      {
+         cout << "Cant recv" << buf << endl;
       }
-      else if(res==0){
-         cout<<"End client"<<endl;
+      else if (res > 0)
+      {
+         cout << "Client: " << buf << endl;
+         send(ClientSock, buf, strlen(buf), 0);
+         cout << "ip - " << inet_ntoa(clientAddr.sin_addr) << endl;
+         cout << "port - " << ntohs(clientAddr.sin_port) << endl;
+         cout << endl;
+      }
+      else if (res == 0)
+      {
+         cout << "End client" << endl;
          close(ClientSock);
          return 0;
       }
-   	
-   
    }
-   
-   
-
-
 }
