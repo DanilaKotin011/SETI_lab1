@@ -15,31 +15,48 @@
 
 using namespace std;
 
+
+int number=3;
+char *mes="3";
+int port = 0;
+char *ip_string="127.0.0.1";
+in_addr ip_to_num;
+
+void getParameters(int argc, char* argv[]){
+    for(int i=1;i<argc;i++){
+        if(strcmp(argv[i],"-p")==0 || strcmp(argv[i],"--port")==0){
+            i++;
+            port=stoi(argv[i]);
+            continue;
+        }
+        else if(strcmp(argv[i],"-n")==0 || strcmp(argv[i],"--number")==0){
+            i++;
+            number=stoi(argv[i]);
+            mes=argv[i];
+            continue;
+        }
+        else if(strcmp(argv[i],"-i")==0 || strcmp(argv[i],"--ip")==0){
+            i++;
+            ip_string=argv[i];
+            continue;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     char buf[BUFLEN];
-    int number;
-    int port;
     int ServSock = 0;
-    in_addr ip_to_num;
     int err = 0;
 
-    if (argc == 1)
-        number = 10;
-    else if (argc > 2)
+    getParameters(argc,argv);
+    err = inet_pton(AF_INET, ip_string, &ip_to_num);
+    if (err < 0)
     {
-        number = stoi(argv[1]);
-        port = stoi(argv[2]);
+        cout << "Error inet_pton" << endl;
+        return 1;
     }
-    if (argc > 3)
-    {
-        err = inet_pton(AF_INET, argv[3], &ip_to_num);
-        if (err < 0)
-        {
-            cout << "Error inet_pton" << endl;
-            return 1;
-        }
-    }
+    
 
     int ClientSock = socket(AF_INET, SOCK_STREAM, 0);
     if (ClientSock < 0)
@@ -57,8 +74,9 @@ int main(int argc, char *argv[])
     servAddr.sin_port = htons(port);
     servAddr.sin_addr = ip_to_num;
 
-    cout << "ip - " << inet_ntoa(servAddr.sin_addr) << endl;
-    cout << "port - " << ntohs(servAddr.sin_port) << endl;
+    cout << "number - " << number << endl;
+    cout << "server ip - " << inet_ntoa(servAddr.sin_addr) << endl;
+    cout << "server port - " << ntohs(servAddr.sin_port) << endl;
 
     unsigned int length = sizeof(servAddr);
     err = connect(ClientSock, (struct sockaddr *)&servAddr, length);
@@ -72,11 +90,20 @@ int main(int argc, char *argv[])
         cout << "Connect is OK" << endl;
     }
 
+    cout<<endl;
+
+    int t=0;
     while (1)
     {
+        if(t==10){
+            cout<<"End"<<endl;
+            close(ClientSock);
+            return 0;
+        }
+        t++;
         sleep(number);
         length = sizeof(servAddr);
-        int n = send(ClientSock, (const char *)argv[1], strlen(argv[1]), 0);
+        int n = send(ClientSock, mes, strlen(argv[1]), 0);
         if (n < 0)
             cout << "Cant send" << endl;
         n = recv(ClientSock, (char *)buf, BUFLEN, 0);

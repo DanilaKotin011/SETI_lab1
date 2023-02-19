@@ -11,9 +11,18 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <sys/resource.h>
 #define BUFLEN 1024
 
 using namespace std;
+
+void reaper(int sig){
+   pid_t pid;
+   int status;
+   while((pid = wait3(&status, WNOHANG, NULL)) > 0);
+}
 
 int main()
 {
@@ -23,6 +32,8 @@ int main()
    int ClientSock = 0;
    in_addr ip_to_num;
    int err = 0;
+
+   signal(SIGCHLD, reaper);
 
    err = inet_pton(AF_INET, "127.0.0.1", &ip_to_num);
    if (err < 0)
@@ -78,17 +89,18 @@ int main()
       ClientSock = accept(ServSock, (sockaddr *)&clientAddr, &length);
       if (ClientSock < 0)
       {
-         cout << "Error accept" << endl;
+         cout << endl << "Error accept" << endl;
       }
       else
       {
-         cout << "New client" << endl;
+         cout << endl << "New client" << endl;
          pid = fork();
          if (pid == 0)
             break;
       }
    }
 
+   cout<<endl;
    close(ServSock);
 
    while (1)
@@ -113,7 +125,7 @@ int main()
       {
          cout << "End client" << endl;
          close(ClientSock);
-         return 0;
+         exit(0);
       }
    }
 }
