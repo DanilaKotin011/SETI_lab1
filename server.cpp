@@ -123,7 +123,7 @@ int main()
       }
       else if (res == 0)
       {
-         cout << "End client" << endl;
+         cout << "End client" << endl << endl;
          close(ClientSock);
          exit(0);
       }
