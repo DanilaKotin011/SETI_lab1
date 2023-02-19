@@ -54,9 +54,15 @@ int main(int argc, char *argv[])
     int ClientSock;
     unsigned int length;
     struct sockaddr_in servAddr;
+    int err=0;
 
     getParameters(argc,argv);
-    
+    err = inet_pton(AF_INET, ip_string, &ip_to_num);
+    if (err < 0)
+    {
+        cout << "Error inet_pton" << endl;
+        return 1;
+    }
 
     ClientSock = socket(AF_INET, SOCK_DGRAM, 0);
     if (ClientSock < 0)
