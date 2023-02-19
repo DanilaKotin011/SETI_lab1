@@ -21,6 +21,7 @@ char *mes="3";
 int port = 0;
 char *ip_string="127.0.0.1";
 in_addr ip_to_num;
+bool with_end=false;
 
 void getParameters(int argc, char* argv[]){
     for(int i=1;i<argc;i++){
@@ -38,6 +39,10 @@ void getParameters(int argc, char* argv[]){
         else if(strcmp(argv[i],"-i")==0 || strcmp(argv[i],"--ip")==0){
             i++;
             ip_string=argv[i];
+            continue;
+        }
+        else if(strcmp(argv[i],"-e")==0 || strcmp(argv[i],"--end")==0){
+            with_end=true;
             continue;
         }
     }
@@ -95,12 +100,15 @@ int main(int argc, char *argv[])
     int t=0;
     while (1)
     {
-        if(t==10){
-            cout<<"End"<<endl;
-            close(ClientSock);
-            return 0;
+        if(with_end){
+            if(t==10){
+                cout<<"End"<<endl;
+                close(ClientSock);
+                return 0;
+            }   
+            t++;
         }
-        t++;
+        
         sleep(number);
         length = sizeof(servAddr);
         int n = send(ClientSock, mes, strlen(argv[1]), 0);
