@@ -15,22 +15,48 @@
 
 using namespace std;
 
+
+int number=3;
+char *mes="3";
+int port = 0;
+char *ip_string="127.0.0.1";
+in_addr ip_to_num;
+bool with_end=false;
+
+void getParameters(int argc, char* argv[]){
+    for(int i=1;i<argc;i++){
+        if(strcmp(argv[i],"-p")==0 || strcmp(argv[i],"--port")==0){
+            i++;
+            port=stoi(argv[i]);
+            continue;
+        }
+        else if(strcmp(argv[i],"-n")==0 || strcmp(argv[i],"--number")==0){
+            i++;
+            number=stoi(argv[i]);
+            mes=argv[i];
+            continue;
+        }
+        else if(strcmp(argv[i],"-i")==0 || strcmp(argv[i],"--ip")==0){
+            i++;
+            ip_string=argv[i];
+            continue;
+        }
+        else if(strcmp(argv[i],"-e")==0 || strcmp(argv[i],"--end")==0){
+            with_end=true;
+            continue;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     char buf[BUFLEN];
-    int number;
-    int port;
     int ClientSock;
     unsigned int length;
     struct sockaddr_in servAddr;
 
-    if (argc == 1)
-        number = 10;
-    else if (argc > 2)
-    {
-        number = stoi(argv[1]);
-        port = stoi(argv[2]);
-    }
+    getParameters(argc,argv);
+    
 
     ClientSock = socket(AF_INET, SOCK_DGRAM, 0);
     if (ClientSock < 0)
