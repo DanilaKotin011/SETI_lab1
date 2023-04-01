@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include <vector>
 #include <sys/types.h>
@@ -18,22 +19,56 @@
 
 using namespace std;
 
-void reaper(int sig){
-   pid_t pid;
-   int status;
-   while((pid = wait3(&status, WNOHANG, NULL)) > 0);
+pthread_mutex_t st_mutex;
+ofstream file("Out.txt");
+
+struct hand_atr{
+   int ServSock;
+   int ClientSock;
+};
+
+void *handler(void *atrr){
+   hand_atr atr;
+   atr = *((hand_atr*) atrr);
+
+   char buf[BUFLEN];
+   unsigned int length;
+
+   while (1)
+   {
+      bzero(buf, sizeof(BUFLEN));
+
+      int res = recv(atr.ClientSock, buf, BUFLEN, 0);
+      if (res < 0)
+      {
+         cout << "Cant recv" << buf << endl;
+      }
+      else if (res > 0)
+      {
+         cout << "Client: " << buf << endl;
+         pthread_mutex_lock(&st_mutex);
+         file << buf << endl;
+         pthread_mutex_unlock(&st_mutex);
+         send(atr.ClientSock, buf, strlen(buf), 0);
+         cout << endl;
+      }
+      else if (res == 0)
+      {
+         cout << "End client" << endl << endl;
+         close(atr.ClientSock);
+         exit(0);
+      }
+   }
 }
 
 int main()
 {
    struct sockaddr_in servAddr, clientAddr;
-   char buf[BUFLEN];
+   
    int pid = 0;
    int ClientSock = 0;
    in_addr ip_to_num;
    int err = 0;
-
-   signal(SIGCHLD, reaper);
 
    err = inet_pton(AF_INET, "127.0.0.1", &ip_to_num);
    if (err < 0)
@@ -83,6 +118,14 @@ int main()
       cout << "Listen is OK" << endl;
    }
 
+   pthread_t th;
+   pthread_attr_t ta;
+   pthread_attr_init(&ta);
+   pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_DETACHED);
+   pthread_mutex_init(&st_mutex,0);
+   
+  
+
    while (1)
    {
       length = sizeof(clientAddr);
@@ -94,38 +137,17 @@ int main()
       else
       {
          cout << endl << "New client" << endl;
-         pid = fork();
-         if (pid == 0)
-            break;
+         hand_atr atr;
+         atr.ServSock=ServSock;
+         atr.ClientSock=ClientSock;
+     
+         if (pthread_create( &th, &ta, handler, (void *) &atr) < 0 )
+         { cout << endl << "Error pthread_create" << endl;}
+
       }
    }
 
+   file.close();
    cout<<endl;
-   close(ServSock);
-
-   while (1)
-   {
-      length = sizeof(clientAddr);
-      bzero(buf, sizeof(BUFLEN));
-
-      int res = recv(ClientSock, buf, BUFLEN, 0);
-      if (res < 0)
-      {
-         cout << "Cant recv" << buf << endl;
-      }
-      else if (res > 0)
-      {
-         cout << "Client: " << buf << endl;
-         send(ClientSock, buf, strlen(buf), 0);
-         cout << "ip - " << inet_ntoa(clientAddr.sin_addr) << endl;
-         cout << "port - " << ntohs(clientAddr.sin_port) << endl;
-         cout << endl;
-      }
-      else if (res == 0)
-      {
-         cout << "End client" << endl << endl;
-         close(ClientSock);
-         exit(0);
-      }
-   }
+   
 }
