@@ -19,56 +19,21 @@
 
 using namespace std;
 
-pthread_mutex_t st_mutex;
-ofstream file("Out.txt");
-
-struct hand_atr{
-   int ServSock;
-   int ClientSock;
-};
-
-void *handler(void *atrr){
-   hand_atr atr;
-   atr = *((hand_atr*) atrr);
-
-   char buf[BUFLEN];
-   unsigned int length;
-
-   while (1)
-   {
-      bzero(buf, sizeof(BUFLEN));
-
-      int res = recv(atr.ClientSock, buf, BUFLEN, 0);
-      if (res < 0)
-      {
-         cout << "Cant recv" << buf << endl;
-      }
-      else if (res > 0)
-      {
-         cout << "Client: " << buf << endl;
-         pthread_mutex_lock(&st_mutex);
-         file << buf << endl;
-         pthread_mutex_unlock(&st_mutex);
-         send(atr.ClientSock, buf, strlen(buf), 0);
-         cout << endl;
-      }
-      else if (res == 0)
-      {
-         cout << "End client" << endl << endl;
-         close(atr.ClientSock);
-         exit(0);
-      }
-   }
-}
+const int MAX_CLIENTS = 2;
 
 int main()
 {
    struct sockaddr_in servAddr, clientAddr;
    
    int pid = 0;
-   int ClientSock = 0;
+   int client_socket[MAX_CLIENTS];
    in_addr ip_to_num;
    int err = 0;
+   char buf[BUFLEN];
+
+   for(int i=0;i<MAX_CLIENTS;i++){
+    client_socket[i]=0;
+   }
 
    err = inet_pton(AF_INET, "127.0.0.1", &ip_to_num);
    if (err < 0)
@@ -117,37 +82,54 @@ int main()
    {
       cout << "Listen is OK" << endl;
    }
-
-   pthread_t th;
-   pthread_attr_t ta;
-   pthread_attr_init(&ta);
-   pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_DETACHED);
-   pthread_mutex_init(&st_mutex,0);
    
-  
-
+  fd_set readfds;
+  int max_sd, sd, new_client, readsize;
+  length = sizeof(clientAddr);
    while (1)
    {
-      length = sizeof(clientAddr);
-      ClientSock = accept(ServSock, (sockaddr *)&clientAddr, &length);
-      if (ClientSock < 0)
-      {
-         cout << endl << "Error accept" << endl;
-      }
-      else
-      {
-         cout << endl << "New client" << endl;
-         hand_atr atr;
-         atr.ServSock=ServSock;
-         atr.ClientSock=ClientSock;
-     
-         if (pthread_create( &th, &ta, handler, (void *) &atr) < 0 )
-         { cout << endl << "Error pthread_create" << endl;}
+        FD_ZERO(&readfds);
+        FD_SET(ServSock, &readfds);
+        max_sd = ServSock;
+        
+        for (int i = 0; i < MAX_CLIENTS; i++) {
+            sd = client_socket[i];
+            if (sd > 0) FD_SET(sd, &readfds);
+            if (sd > max_sd) max_sd = sd;
+        }
 
-      }
+        if(select(max_sd + 1, &readfds, NULL, NULL, NULL)<0){
+            cout << endl << "Error select" << endl;
+        }
+
+        if (FD_ISSET(ServSock, &readfds)) {
+            if ((new_client= accept(ServSock, (struct sockaddr *)&clientAddr, (socklen_t*)&length )) < 0) {
+                cout << endl << "Error accept" << endl;
+            }
+            printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_client , inet_ntoa(clientAddr.sin_addr) , ntohs(clientAddr.sin_port));
+         
+            for (int i = 0; i < MAX_CLIENTS; i++) {
+                if (client_socket[i] == 0) {
+                    client_socket[i] = new_client;
+                    break;
+                }
+            }
+        }
+      for (int i = 0; i < MAX_CLIENTS; i++) {
+            sd = client_socket[i];
+            if (FD_ISSET(sd, &readfds)) {
+                if ((readsize = read(sd, buf, 1024)) == 0) {
+                    cout << endl << "Disconnect" << endl;
+                    close(sd);
+                    client_socket[i] = 0;
+                } else {
+                    buf[readsize] = '\0';
+                    cout << endl << "Client: " << buf << endl;
+                    send(sd, buf, strlen(buf), 0);
+                }
+            }
+        }
    }
-
-   file.close();
    cout<<endl;
    
 }
